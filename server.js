@@ -46,21 +46,32 @@ io.on("connection", (socket) => {
   }); */
 
   /* --messages-- */
-  socket.emit("mensajesActualizados", messages);
+   if(!fs.existsSync("messages.json")){
+    fs.writeFileSync("messages.json", JSON.stringify([]))
+  } 
+const messagesResult = JSON.parse(fs.readFileSync("messages.json"))
+
+  socket.emit("mensajesActualizados", messagesResult);
 
   socket.on("nuevoMensaje", (mensaje) => {
     mensaje.fecha = new Date().toLocaleString();
-    messages.push(mensaje);
-    io.emit("mensajesActualizados", messages);
+    messagesResult.push(mensaje);
+    fs.writeFileSync("messages.json", JSON.stringify(messagesResult,null,2))
+    io.emit("mensajesActualizados", messagesResult);
   });
-
+  
   /* --products-- */
-
-  socket.emit("productosActualizados", products);
-
+  if(!fs.existsSync("products.json")){
+    fs.writeFileSync("products.json", JSON.stringify([]))
+  } 
+  const productsResult = JSON.parse(fs.readFileSync("products.json"))
+  
+  socket.emit("productosActualizados", productsResult);
+  
   socket.on("nuevoProducto", (product) => {
-    products.push(product);
-    io.emit("productosActualizados", products);
+    productsResult.push(product);
+    fs.writeFileSync("products.json", JSON.stringify(productsResult,null,2))
+    io.emit("productosActualizados", productsResult);
   });
 });
 
