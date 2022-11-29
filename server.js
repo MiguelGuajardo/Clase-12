@@ -8,7 +8,11 @@ const { Server: IOServer } = require("socket.io");
 const httpServer = new HttpServer(app);
 const fs = require("fs");
 const io = new IOServer(httpServer);
-
+const ClienteSql = require("./sql")
+const {options} = require("./tables/optionsMariaDB")
+const {optionsSQLite} = require("./tables/optionsSQLite")
+const knexMariaDB = new ClienteSql(options)
+const knexSQLite3 = new ClienteSql(optionsSQLite)
 /* -- config handlebars-- */
 const configHandlebars = {
   extname: ".handlebars",
@@ -22,6 +26,13 @@ app.set("view engine", "handlebars");
 app.set("views", "./views");
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
+
+/* const { optionsSQLite } = require("./tables/optionsSQLite");
+const knexSQLite3 = require("knex")(optionsSQLite);
+
+const { options } = require("./tables/optionsMariaDB");
+const knexMariaDB = require("knex")(options); */
+
 /* --Peticiones y arrays */
 let products = [];
 let messages = [];
@@ -38,7 +49,7 @@ app.get("/", (req, res) => {
 });
 /* --Sockets-- */
 
-io.on("connection", (socket) => {
+io.on("connection", async (socket) => {
   console.log("El usuario", socket.id, "se ha conectado");
 
   /* socket.on("disconnect", () => {
@@ -46,34 +57,36 @@ io.on("connection", (socket) => {
   }); */
 
   /* --messages-- */
-   if(!fs.existsSync("messages.json")){
-    fs.writeFileSync("messages.json", JSON.stringify([]))
-  } 
-const messagesResult = JSON.parse(fs.readFileSync("messages.json"))
-
-  socket.emit("mensajesActualizados", messagesResult);
-
-  socket.on("nuevoMensaje", (mensaje) => {
-    mensaje.fecha = new Date().toLocaleString();
-    messagesResult.push(mensaje);
-    fs.writeFileSync("messages.json", JSON.stringify(messagesResult,null,2))
-    io.emit("mensajesActualizados", messagesResult);
-  });
-  
+  try {
+    const mensajesLeidos = await knexSQLite3.listarMensajes()
+    socket.emit("mensajesActualizados", mensajesLeidos)
+    
+    socket.on("nuevoMensaje", async(mensaje) => {
+      let nuevoMensaje = {
+        ...mensaje,
+        fecha: new Date().toLocaleString(),
+      };
+      await knexSQLite3.insertarMensajes(nuevoMensaje)
+      const mensajesLeidos = await knexSQLite3.listarMensajes()
+      socket.emit("mensajesActualizados", mensajesLeidos)
+     })
+  } catch (error) {
+    console.log(error)
+  }
   /* --products-- */
-  if(!fs.existsSync("products.json")){
-    fs.writeFileSync("products.json", JSON.stringify([]))
-  } 
-  const productsResult = JSON.parse(fs.readFileSync("products.json"))
-  
-  socket.emit("productosActualizados", productsResult);
-  
-  socket.on("nuevoProducto", (product) => {
-    productsResult.push(product);
-    fs.writeFileSync("products.json", JSON.stringify(productsResult,null,2))
-    io.emit("productosActualizados", productsResult);
-  });
-});
+  try {
+    const articulosLeidos = await knexMariaDB.listarArticulos()
+    socket.emit("productosActualizados", articulosLeidos)
+
+    socket.on("nuevoProducto", async(product) => {
+       await knexMariaDB.insertarArticulos(product)
+       const articulosLeidos = await knexMariaDB.listarArticulos()
+       socket.emit("productosActualizados", articulosLeidos)
+      })
+
+  } catch (error) {
+    console.log(error)
+  }})
 
 /*--Server-- */
 
