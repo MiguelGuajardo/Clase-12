@@ -13,6 +13,7 @@ const {options} = require("./tables/optionsMariaDB")
 const {optionsSQLite} = require("./tables/optionsSQLite")
 const knexMariaDB = new ClienteSql(options)
 const knexSQLite3 = new ClienteSql(optionsSQLite)
+const ProductsTestRouter = require("./routes/products/index-test")
 /* -- config handlebars-- */
 const configHandlebars = {
   extname: ".handlebars",
@@ -47,6 +48,7 @@ app.get("/", (req, res) => {
     existMessage,
   });
 });
+app.use("/api/products-test", ProductsTestRouter)
 /* --Sockets-- */
 
 io.on("connection", async (socket) => {
