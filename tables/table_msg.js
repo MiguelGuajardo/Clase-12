@@ -7,6 +7,11 @@ knex.schema
     table.string("email");
     table.string("fecha");
     table.string("texto");
+    table.string("user");
+    table.string("name");
+    table.string("lastName");
+    table.string("age");
+    table.string("photo");
   })
   .then(() => console.log("tabla creada"))
   .catch((err) => {

@@ -37,47 +37,83 @@ botónCargar.addEventListener("click", (e) => {
   inputPrice.value = "";
   inputThumbnail.value = "";
 });
-/* --Messages-- */
-function mostrarMensajes(messages) {
-  const mensajesParaMostrar = messages.map(({ fecha, email, texto }) => {
+/*                                                                                  --Messages-- */
+
+
+function mostrarMensajes(messages,result) {
+  const authorSchema = new normalizr.schema.Entity("author");
+  const msgSchema = new normalizr.schema.Entity(
+    "messages",
+    {
+      author: authorSchema,
+    },
+    { idAttribute: "id" }
+  );
+  const denormalizeData = normalizr.denormalize(
+    messages.result,
+    [msgSchema],
+    messages.entities
+  );
+  const html = denormalizeData.map((msg)=>{
     return `<div class="d-flex form-control-lg w-50 m-auto">
-    <p class="text-warning">${fecha}</p>
-     -- 
-    <p class="text-primary"><strong>${email}</strong></p>
-     --
-    <p class="text-success fst-italic">${texto}</p>
+    <p class="text-warning">${msg.author.alias}</p>
+     [ 
+    <p class="text-primary"><strong>${msg.date}</strong></p>
+     ]:
+    <p class="text-success fst-italic">${msg.text}</p>
+    -
+    <img
+              src="${msg.author.avatar}"
+              style="width: 30px; height: 30px; margin-left: 10px;"
+            />
     </div>
     `;
-  });
+  })
+  .join(" ");
+  document.getElementById("listaMensajes").innerHTML = html;
 
-  const mensajesHtml = `
-<ul>
-${mensajesParaMostrar.join("\n")}
-</ul>`;
+  let centerMessage;
+  
+  if (result > 0) {
+    centerMessage = Math.round(result);
+  } else {
+    centerMessage = "No se puede comprimir mas";
+  }
 
-  const listaMensajes = document.getElementById("listaMensajes");
+  document.getElementById(
+    "centroMsg"
+  ).innerHTML = `Centro de mensajes - (Compresión: ${centerMessage})`;
 
-  listaMensajes.innerHTML = mensajesHtml;
-
-  // console.table(mensajesParaMostrar)
 }
+socket.on("mensajesActualizados", (messages, result) => mostrarMensajes(messages, result));
 
-socket.on("mensajesActualizados", (messages) => {
-  mostrarMensajes(messages);
-});
 const botónEnviar = document.getElementById("botónEnviar");
 botónEnviar.addEventListener("click", (e) => {
+  const inputUser = document.getElementById("inputUser");
+  const inputName = document.getElementById("inputName");
+  const inputLastName = document.getElementById("inputLastName");
   const inputEmail = document.getElementById("inputEmail");
+  const inputAge = document.getElementById("inputAge");
+  const inputPhoto = document.getElementById("inputPhoto");
   const inputText = document.getElementById("inputText");
 
-  if (inputEmail.value && inputText.value) {
+  if (inputEmail.value && inputText.value && inputUser.value && inputName.value && inputLastName.value && inputAge.value && inputPhoto.value) {
     const message = {
-      email: inputEmail.value,
-      texto: inputText.value,
-    };
+      author: {
+        id: inputEmail.value,
+        nombre: inputName.value,
+        apellido: inputLastName.value,
+        edad: inputAge.value,
+        alias: inputUser.value,
+        avatar: inputPhoto.value,
+      },
+      text: inputText.value,
+    }
+    console.log(message)
     socket.emit("nuevoMensaje", message);
   } else {
     alert("ingrese algun mensaje");
   }
   inputText.value = "";
+  return false;
 });
